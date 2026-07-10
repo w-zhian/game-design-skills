@@ -153,6 +153,11 @@ For each system, test the boundary cases from GATE 2 section C. Document the exp
 | System boundary violation | `system-design` |
 | Loop/coherence problem | `gameplay-design` |
 
+## Skill References
+
+- `references/qa-checklist.md` — 跨模块一致性矩阵 + 边界测试7维度 + 风险评估
+- `references/config-table-analysis.md` — 配置表分类规则 + 产出消耗模拟逻辑 + 割草类特有检查
+
 ## Shared References
 
 - `_shared/references/design-constitution.md`
