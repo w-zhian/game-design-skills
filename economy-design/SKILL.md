@@ -104,6 +104,11 @@ Read `references/economy-framework.md` for the full framework. For each resource
 | How economy pacing fits content cadence | `gameplay-design` |
 | Cross-module consistency (economy vs combat numbers) | `qa-review` |
 
+## Skill References
+
+- `references/economy-framework.md` — 资源流映射 + 闭环三角 + 定价模型 + 战令/抽卡模板
+- `references/slg-economy-framework.md` — 五层资源分类 + 鲸鱼生态分层 + X+SLG融合 + 赛季重置 + 国内vs出海差异
+
 ## Shared References
 
 - `_shared/references/design-constitution.md`
