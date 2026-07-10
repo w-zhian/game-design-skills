@@ -100,6 +100,11 @@ Use this compact map before proposing details:
 | Core loop and content pacing | `gameplay-design` |
 | Cross-module consistency check | `qa-review` |
 
+## Skill References
+
+- `references/system-framework.md` — 系统边界声明 + 实体/状态/动词模型 + 依赖图规则
+- `references/cross-genre-mental-models.md` — 品类基因论 + 循环层级诊断 + 数值安全边界 + 融合可行性矩阵
+
 ## Shared References
 
 - `_shared/references/design-constitution.md`
