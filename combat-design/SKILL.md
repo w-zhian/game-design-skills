@@ -107,6 +107,12 @@ For each skill/ability:
 | How combat pacing fits content cadence | `gameplay-design` |
 | Cross-module consistency (combat numbers vs economy) | `qa-review` |
 
+## Skill References
+
+- `references/combat-framework.md` — 伤害公式库 + Boss设计模板 + TTK基准表
+- `references/monte-carlo-diagnostics.md` — 六维诊断体系 + 模拟规模标准 + 报告结构
+- `references/action-rpg-combat.md` — 动作RPG战斗手感诊断 + Boss四阶段模板 + 角色差异化三层模型
+
 ## Shared References
 
 - `_shared/references/design-constitution.md`
