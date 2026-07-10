@@ -116,6 +116,12 @@ Read `references/content-framework.md` for content pacing framework.
 | Economy rewards for activities | `economy-design` |
 | Cross-module consistency check | `qa-review` |
 
+## Skill References
+
+- `references/core-loop-framework.md` — 核心循环6元素 + 决策密度审计 + 玩家动机模型
+- `references/content-framework.md` — 内容配方5拍 + 变化轴 + 复用准则
+- `references/sanguo-troop-design.md` — 一队三将/统帅值/武将协同矩阵/兵种差异化设计
+
 ## Shared References
 
 - `_shared/references/design-constitution.md`
