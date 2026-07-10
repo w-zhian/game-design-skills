@@ -121,6 +121,17 @@ For deep reports: use the full report template with all 11 sections.
 | Cross-module consistency check | `qa-review` |
 | Final config table production (xlsx/TSV) | (future `table-config` skill) |
 
+## Skill References
+
+- `references/analysis-framework.md` — seven-layer teardown method
+- `references/genre-patterns.md` — genre-specific benchmarks
+- `references/report-template.md` — structured output format
+- `references/formula-toolkit.md` — 五特性模型 + 公式选择决策 + 配表生成标准
+- `references/survivor-config-templates.md` — 割草/幸存者类4张核心配表模板
+- `references/survivor-numeric-framework.md` — 三层DPS体系 + 涌现约束平衡 + 数字膨胀边界
+- `references/cross-genre-framework.md` — 六维数值分析法 + 公式决策树 + 安全边界标准
+- `references/idle-growth-framework.md` — 海外Idle vs 国内放置 + 离线收益四模型 + Prestige设计
+
 ## Shared References
 
 - `_shared/references/design-constitution.md` — design principles and red lines
