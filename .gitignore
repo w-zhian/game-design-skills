@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Evolution ledgers are tracked (not ignored) for audit trail
+# But temporary output files should be ignored
+output/
+*.tmp
+*.bak
+
+# Node
+node_modules/
