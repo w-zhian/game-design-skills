@@ -84,7 +84,7 @@ Read `references/qa-checklist.md` for the full checklist. Load all relevant skil
 - Flag any number that appears in two places with different values
 
 ### 3. Run Cross-Module Consistency Check
-Read `_shared/references/quality-rubric.md` for quality dimensions.
+Read `../_shared/references/quality-rubric.md` for quality dimensions.
 
 Create a cross-reference matrix:
 
@@ -160,8 +160,8 @@ For each system, test the boundary cases from GATE 2 section C. Document the exp
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 
 ## Self-Evolution Hook
 

@@ -107,8 +107,8 @@ Use this compact map before proposing details:
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 - Output templates: `references/system-design-doc-template.md` (from legacy wangzhao skill)
 
 ## Self-Evolution Hook

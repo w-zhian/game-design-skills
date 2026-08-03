@@ -134,8 +134,8 @@ For deep reports: use the full report template with all 11 sections.
 
 ## Shared References
 
-- `_shared/references/design-constitution.md` — design principles and red lines
-- `_shared/references/quality-rubric.md` — quality scoring and final check gate
+- `../_shared/references/design-constitution.md` — design principles and red lines
+- `../_shared/references/quality-rubric.md` — quality scoring and final check gate
 
 ## Self-Evolution Hook
 

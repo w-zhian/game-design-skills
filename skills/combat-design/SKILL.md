@@ -115,8 +115,8 @@ For each skill/ability:
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 
 ## Self-Evolution Hook
 

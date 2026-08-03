@@ -124,8 +124,8 @@ Read `references/content-framework.md` for content pacing framework.
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 
 ## Self-Evolution Hook
 

@@ -1,0 +1,15 @@
+{
+  "name": "game-design-skills",
+  "displayName": "游戏设计技能包",
+  "version": "2.3.0",
+  "description": "Self-evolving game design skill pack for game planners: numerical planning, combat, system, economy and gameplay design, QA review, and a skill-evolution meta-skill.",
+  "descriptionZh": "面向游戏策划的可自进化技能包：数值规划、战斗设计、系统设计、经济设计、玩法设计、质量审查，以及 skill-evolution 自进化元技能。",
+  "author": { "name": "w-zhian (决明子)" },
+  "homepage": "https://github.com/w-zhian/game-design-skills",
+  "repository": "https://github.com/w-zhian/game-design-skills",
+  "logo": "./assets/avatar.svg",
+  "keywords": ["qoder-plugin", "skill", "game-design", "game-planning"],
+  "category": "developer-tools",
+  "tags": ["skill", "game-design", "numerical-design"],
+  "skills": "./skills/"
+}

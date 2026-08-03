@@ -169,8 +169,8 @@ When a business skill's Self-Evolution Hook says "After 3 entries accumulate, in
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 
 ## Boundaries
 

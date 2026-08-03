@@ -38,7 +38,7 @@ Before proposing any monetization mechanism, verify:
 - [ ] PvP/competitive modes are not dominated by raw spending gaps
 - [ ] First payer wall arrives AFTER the player has experienced the core loop's promise
 
-If ANY check fails, flag it as a red line violation per `_shared/references/design-constitution.md`.
+If ANY check fails, flag it as a red line violation per `../_shared/references/design-constitution.md`.
 
 ## Anti-Rationalization Defense
 
@@ -111,8 +111,8 @@ Read `references/economy-framework.md` for the full framework. For each resource
 
 ## Shared References
 
-- `_shared/references/design-constitution.md`
-- `_shared/references/quality-rubric.md`
+- `../_shared/references/design-constitution.md`
+- `../_shared/references/quality-rubric.md`
 
 ## Self-Evolution Hook
 
