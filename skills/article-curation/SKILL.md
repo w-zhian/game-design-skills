@@ -1,6 +1,6 @@
 ---
 name: article-curation
-version: 1.0.0
+version: 1.1.0
 description: >-
   Daily curation of game design articles from GameRes forum board 6 (游戏策划).
   Fetches the latest threads via API, filters by relevance to system / combat /
@@ -82,8 +82,10 @@ than `last_cursor`. If none, stop and report "今日无新帖".
 
 **Step 3: Filter and score**
 Apply the criteria in [references/curation-criteria.md](references/curation-criteria.md).
-Keep candidates scoring >= 6/10, up to 5 articles. Prefer method/framework
-articles (干货/深度/复盘) over opinion-only posts.
+Daily curation of NEW posts ignores view/reply counts entirely — select by
+direction relevance (>= 3/4) plus title depth signals, then verify structure
+and depth by reading the body (Section 3 of criteria). Up to 5 articles.
+Prefer method/framework articles (干货/深度/复盘) over opinion-only posts.
 
 **Step 4: Read and summarize**
 Open each selected article URL. Extract:
