@@ -3,9 +3,11 @@ name: overseas-merge2-battle-sim-framework
 version: 2.0.0
 description: >-
   Use when Codex needs product-level decisions for overseas Merge-2 games that connect
-  merge, management, combat, and world consequences. Trigger on Chinese or English
-  requests about 海外 Merge-2、二合战斗、模拟经营混合、品类比较、战斗概念、单场遭遇、
-  节奏/心流、Merge→战斗接口、竞品边界、原型验证, or A/B/C product-route comparison;
+  merge, management, combat, and world consequences. Trigger on Chinese requests about
+  海外 Merge-2、二合战斗、模拟经营混合、品类比较、战斗概念、单场遭遇、节奏/心流、
+  Merge→战斗接口、竞品边界、原型验证, or English requests about category comparison,
+  combat concept, encounter design/spec, pacing/flow curve, Merge-to-combat interface,
+  competitor boundary/benchmark, prototype validation, and A/B/C product-route comparison;
   route specialist implementation to the repository's combat, numerical, economy,
   gameplay, system, and QA skills.
 ---
@@ -34,9 +36,16 @@ description: >-
 | 角色、敌人、单场遭遇 | `references/combat/04-roles-enemies-encounters.md` |
 | 埋点、原型验证、Kill Criteria | `references/combat/05-telemetry-and-validation.md` |
 | 当前竞品证据与无战斗边界 | `references/combat/06-current-competitor-evidence.md` |
-| 路线、市场与长期循环 | `references/research/` 与 `references/07-synthesis.md` |
+| 重新规划或扩展研究 | `references/research/00-research-plan.md` |
+| 共享市场、受众与品类口径 | `references/research/01-shared-market.md` |
+| A 温馨庇护所路线 | `references/research/02-cozy-shelter.md` |
+| B 神话商旅路线 | `references/research/03-mythic-caravan.md` |
+| C 废土车队路线 | `references/research/04-wasteland-convoy.md` |
+| 失败模式与跨路线张力 | `references/research/05-failures-and-tensions.md` |
+| 验证阶梯与时间线 | `references/research/06-validation-and-timeline.md` |
+| 跨路线综合与最终比较 | `references/07-synthesis.md` |
 
-组合顺序按问题因果确定。例如，设计“Merge 装备如何影响一场遭遇”时，先读接口合同，再读角色/敌人/遭遇；验证 TTK 改动时，先读心流数值，再读埋点验证。静态竞品材料不能替代当前事实核验。
+同一请求先选择一个匹配文件；只有问题明确跨主题、且第二个文件会改变判断时才组合，不能把整个研究目录作为默认输入。组合顺序按问题因果确定。例如，设计“Merge 装备如何影响一场遭遇”时，先读接口合同，再读角色/敌人/遭遇；验证 TTK 改动时，先读心流数值，再读埋点验证。静态竞品材料不能替代当前事实核验。
 
 ## A/B/C 所有权边界
 
