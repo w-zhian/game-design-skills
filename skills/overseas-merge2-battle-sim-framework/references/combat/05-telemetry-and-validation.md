@@ -22,87 +22,166 @@
 
 ## 公共字段
 
-所有事件至少继承以下公共字段；命名可由数据团队调整，但语义不可丢失。
+所有事件至少继承以下基础字段；命名可由数据团队调整，但语义不可丢失。准备实例、正式战斗和外置流程使用不同上下文 ID，不得互相冒充。
 
 | 字段 | 用途 | 最小化说明 |
 |---|---|---|
 | `event_time` | 排序与计算相对时间 | 使用服务端/客户端统一时间约定 |
 | `anonymous_player_id` | 会话与回流串联 | 不使用直接身份信息 |
 | `session_id` | 区分单次会话 | 返回前后台的切分规则需统一 |
-| `combat_run_id` | 串联一局及重试 | 每次正式开战唯一；预览不生成 |
 | `content_version` | 区分资源、逻辑和配置版本 | 必须能回溯参数集 |
 | `experiment_group` | 对照实验 | 无实验写明确的默认组 |
 | `route_id` | A / B / C 或经批准的新路线 | 用于所有权冲突分析 |
 | `encounter_id` | 遭遇模板 | 与难度/词缀分开 |
 | `player_stage` | 生命周期/章节分群 | 不记录无用途的完整账号档案 |
 
+### 上下文 ID 生命周期
+
+| ID | 生成时机 | 使用范围 | 连接规则 |
+|---|---|---|---|
+| `prepare_instance_id` | 每次准备页实际进入时新生成 | `combat_prepare_viewed/changed/exited`，并由 `combat_started` 原样携带 | 同一次准备内保持不变；退出后再次进入必须新建，不复用旧值 |
+| `combat_run_id` | 仅在 `combat_started` 时新生成 | 正式开战至结算、重试、回写和返回 Merge | 一个正式开战一个 ID；原样重试也生成新 ID，并用 `previous_combat_run_id` 连接 |
+| `flow_instance_id` | 会话、章节/日、周活动各自开始时生成 | `outer_flow_phase_changed` | 与 `flow_scale` 共同唯一；允许关联多个准备实例和战斗局 |
+
+- `[HYPOTHESIS]` 准备上下文因开战、关闭、返回、切后台超时或切换遭遇而结束时发送 `combat_prepare_exited`；只有 `exit_reason=started` 且随后同一 `prepare_instance_id` 出现 `combat_started` 才算转化为正式战斗，其余原因记为放弃/中断准备。
+- `[HYPOTHESIS]` 同一会话再次进入同一遭遇仍生成新的 `prepare_instance_id`；`previous_prepare_instance_id` 只用于连接紧邻的同遭遇重进，不跨会话串联。
+- `[HYPOTHESIS]` `combat_retry_selected` 指向失败局；若玩家选择改配，下一次 `combat_prepare_viewed` 同时携带 `source_combat_run_id`，但使用新的准备实例 ID。
+
 ## 最小事件字典
 
-### 1. `combat_prepare_viewed` — 准备页进入
+### `outer_flow_phase_changed` — 外置流程阶段进入 / 退出
 
-- 最低字段：公共字段（`combat_run_id` 可先使用准备实例 ID）、`entry_source`、`visible_objective_id`、`visible_threat_tags`、`current_loadout_signature`。
+- 最低字段：基础字段、`flow_scale`（session / chapter_day / week）、`flow_instance_id`、`phase_id`、`transition`（entered / exited）、`elapsed_active_time`、`completion_reason`、可选的 `prepare_instance_id` / `combat_run_id`。
+- 回答：三种外置尺度各阶段持续多久、完成/中断在哪里、风险检验频次、恢复与回写是否闭合。
+- 不采集：阶段内每个普通 UI 行为；已有专项事件只通过 ID 关联。
+
+### `combat_prepare_viewed` — 准备页进入
+
+- 最低字段：基础字段、新生成的 `prepare_instance_id`、可选 `previous_prepare_instance_id` / `source_combat_run_id`、`entry_source`、`visible_objective_id`、`visible_threat_tags`、`current_loadout_signature`。
 - 回答：玩家看到了什么目标/敌情，从哪里进入，初始配置是什么。
 - 不采集：未展示给玩家的隐藏敌人参数。
 
-### 2. `combat_prepare_changed` — 准备修改
+### `combat_prepare_changed` — 准备修改
 
-- 最低字段：公共字段、`change_type`、`from_option_id`、`to_option_id`、`slot_or_route_id`、`source_object_id`、`preview_changed`。
+- 最低字段：基础字段、`prepare_instance_id`、`change_type`、`from_option_id`、`to_option_id`、`slot_or_route_id`、`source_object_id`、`preview_changed`。
 - 回答：玩家是否做取舍，改的是单位/设施、器具、站位、资源还是路线；预览是否反馈。
 - 不采集：每次拖拽像素路径；只有最终有效修改和撤销需要记录。
 
-### 3. `combat_started` — 战斗开始
+### `combat_prepare_exited` — 准备退出 / 放弃
 
-- 最低字段：公共字段、`final_loadout_signature`、`objective_initial_state`、`resource_initial_state`、`threat_tags_shown`、`total_duration_target`。
+- 最低字段：基础字段、`prepare_instance_id`、`exit_reason`、`elapsed_prepare_active_time`、`changed_flag`、`next_destination`。
+- 回答：准备实例是进入战斗、主动返回、切换遭遇还是超时放弃；反复进入不会被误合并成一局。
+- 不采集：离开后的页面路径明细；只保留直接去向类别。
+
+### `combat_started` — 战斗开始
+
+- 最低字段：基础字段、`prepare_instance_id`、新生成的 `combat_run_id`、`final_loadout_signature`、`objective_initial_state`、`resource_initial_state`、`resource_accounting_version`、`threat_tags_shown`、`total_duration_target`。
 - 回答：最终选择、可见情报与起始状态是什么。
 - `[HYPOTHESIS]` `total_duration_target` 是该版本的原型配置，不代表实际结束时间。
 
-### 4. `combat_phase_entered` — 阶段进入
+### `combat_phase_entered` — 阶段进入
 
-- 最低字段：公共字段、`phase_id`、`elapsed_active_time`、`tau_at_entry`、`phase_trigger`、`objective_state`、`resource_state`、`pressure_components`。
-- 回答：阶段是否在目标位置发生、由什么状态触发、压力由哪些成分构成。
-- 不采集：若压力组件没有对应调参或诊断用途，不扩展字段。
+- 最低字段：基础字段、`combat_run_id`、`phase_id`、`elapsed_active_time`、`phase_trigger`、`objective_state`、`resource_state`。
+- 回答：阶段在实际活跃时间的何处发生、由什么状态触发。`tau` 不在运行时写入，结算后用实际 `T` 派生。
+- 不采集：五个阶段点不承担完整压力曲线；曲线由版本化快照重建。
 
-### 5. `combat_intervention_used` — 主动干预
+### `combat_choice_effect_triggered` — 配置 / 输入产生可见效果
 
-- 最低字段：公共字段、`intervention_id`、`target_id_or_zone`、`window_id`、`time_since_window_open`、`resource_cost`、`immediate_result_code`。
-- 回答：玩家是否识别窗口、选择何种目标、输入是否改变过程。
+- 最低字段：基础字段、`combat_run_id`、`contract_id`、`source_object_id`、`trigger_mode`（automatic / manual）、`elapsed_active_time`、`effect_type`、`feedback_cue_id`、`target_or_zone`、`result_code`。
+- 回答：自动配置或手动输入何时第一次真实生效、给了什么反馈，以及首次有效反馈时间。
+- 不采集：普通伤害逐跳；只记录合同定义的可归因触发。
+
+### `combat_unit_became_damageable` — 单位首次可被处理
+
+- 最低字段：基础字段、`combat_run_id`、`unit_instance_id`、`unit_archetype_id`、`elapsed_active_time`、`availability_reason`。
+- 回答：单位 TTK 的起点，区分出生、入场、无敌结束或暴露窗口。
+- 不采集：单位位置轨迹或逐帧属性。
+
+### `combat_unit_resolved` — 单位死亡 / 失效 / 逃离
+
+- 最低字段：基础字段、`combat_run_id`、`unit_instance_id`、`unit_archetype_id`、`elapsed_active_time`、`resolve_reason`、`credited_contract_id`。
+- 回答：TTK 终点、击杀/失效序列和前后哨兵区间；逃离与非击杀失效不得混成击杀。
+- 不采集：每次受击；公式审计另走受控轨迹。
+
+### `combat_intervention_window_changed` — 干预窗口曝光 / 关闭
+
+- 最低字段：基础字段、`combat_run_id`、`window_id`、`window_state`（opened / closed）、`elapsed_active_time`、`cue_id`、`close_reason`；关闭时增加 `input_occurred`。
+- 回答：窗口曝光次数、可响应时长、未输入率和输入延迟。
+- 边界：事件只能证明信号已曝光和玩家是否响应；“玩家认知上已识别”仍需访谈或受控任务确认。
+
+### `combat_intervention_used` — 主动干预
+
+- 最低字段：基础字段、`combat_run_id`、`intervention_id`、`target_id_or_zone`、`window_id`、`time_since_window_open`、`resource_cost`、`immediate_result_code`。
+- 回答：窗口曝光后玩家是否响应、选择何种目标、输入是否改变过程；认知识别需结合质化证据。
 - 不采集：无结果差异的装饰点击。
 
-### 6. `combat_objective_damaged` — 目标受损
+### `combat_pressure_snapshot` — 压力组件快照
 
-- 最低字段：公共字段、`objective_id`、`damage_source_type`、`normalized_loss`、`remaining_objective_value`、`preventable_by_contract_id`。
+- 最低字段：基础字段、`combat_run_id`、`elapsed_active_time`、`snapshot_reason`（fixed_interval / state_change）、`sampling_policy_version`、`pressure_normalization_version`、`component_raw_aggregates`、`component_normalized`、`objective_state`、`resource_state`。
+- 回答：结算后重建压力曲线，并计算峰值位置、斜率、方差与 `CurveMAE`。
+- 不采集：敌人逐个坐标或逐帧状态；`sampling_policy_version` 只在固定采样点和声明的关键状态变化时记录聚合快照。
+
+### `combat_objective_damaged` — 目标受损
+
+- 最低字段：基础字段、`combat_run_id`、`objective_id`、`damage_source_type`、`normalized_loss`、`remaining_objective_value`、`preventable_by_contract_id`。
 - 回答：损失来自哪类压力，是否有已公开的可改准备/干预。
 - 不采集：除非公式审计需要，不上传每次普通单位伤害明细。
 
-### 7. `combat_resource_consumed` — 资源消耗
+### `combat_resource_supplied` — 局内资源补充
 
-- 最低字段：公共字段、`resource_type`、`amount_normalized`、`consume_reason`、`remaining_normalized`、`source_object_id`。
-- 回答：哪种准备被何时消耗，是否形成资源余量和连续路线判断。
+- 最低字段：基础字段、`combat_run_id`、`resource_type`、`amount`、`supply_reason`、`source_object_id`、`resource_accounting_version`。
+- 回答：累计可用资源的分母，区分初始携带与局内补给。
+- 不采集：与本局合同无关的钱包或仓库余额。
+
+### `combat_resource_consumed` — 资源消耗
+
+- 最低字段：基础字段、`combat_run_id`、`resource_type`、`amount`、`amount_from_initial_pool`、`consume_reason`、`remaining_amount`、`source_object_id`、`resource_accounting_version`。
+- 回答：哪种准备被何时消耗，并与初始量/局内供给分别计算保留与消耗口径。
 - 不采集：与设计无关的资产钱包余额。
 
-### 8. `combat_resolved` — 胜负
+### `combat_resolved` — 胜负
 
-- 最低字段：公共字段、`result`、`elapsed_active_time`、`last_phase_id`、`objective_final_state`、`resource_final_state`、`failure_reason_code`、`attribution_cards_shown`、`near_fail_flag`。
+- 最低字段：基础字段、`combat_run_id`、`result`、`elapsed_active_time`（实际 `T`）、`last_phase_id`、`objective_final_state`、`resource_final_state`、`resource_accounting_version`、`failure_reason_code`、`attribution_cards_shown`、`near_fail_flag`。
 - 回答：为何结束、代价如何、系统向玩家解释了什么。
 - `[HYPOTHESIS]` `near_fail_flag` 必须引用版本化的 `near_fail_condition`，不可由客户端随意判定。
 
-### 9. `combat_retry_selected` — 重试 / 改配
+### `combat_attribution_card_interacted` — 因果卡展示 / 展开 / 选项
 
-- 最低字段：公共字段、`previous_combat_run_id`、`retry_mode`、`time_since_resolve`、`changed_contract_types`、`recovery_cost_type`。
+- 最低字段：基础字段、`combat_run_id`、`card_id`、`contract_id`、`interaction`（shown / expanded / next_action_selected / dismissed）、`elapsed_since_resolve`。
+- 回答：因果卡是否真正展示、被展开，以及玩家是否从卡片进入可改项。
+- 不采集：卡片全文或玩家自由文本。
+
+### `combat_retry_selected` — 重试 / 改配
+
+- 最低字段：基础字段、`previous_combat_run_id`、`retry_mode`、`time_since_resolve`、`changed_contract_types`、`recovery_cost_type`。
 - 回答：玩家是原样重试、改配、降低难度、撤退还是稍后返回；失败是否产生新决定。
 - 不采集：没有行为差异的重复按钮曝光。
 
-### 10. `world_writeback_applied` — 世界回写
+### `world_writeback_applied` — 世界回写
 
-- 最低字段：公共字段、`writeback_type`、`affected_world_object_id`、`source_combat_run_id`、`next_action_ids_exposed`、`reversible_flag`。
+- 最低字段：基础字段、`source_combat_run_id`、`writeback_type`、`affected_world_object_id`、`next_action_ids_exposed`、`reversible_flag`。
 - 回答：战斗如何改变人、空间、伙伴、车队、地图、生产或订单。
 - 不采集：完整世界状态；只记录本局产生的变化。
 
-### 11. `merge_returned_after_combat` — 返回 Merge
+### `merge_returned_after_combat` — 返回 Merge
 
-- 最低字段：公共字段、`source_combat_run_id`、`return_delay_active_time`、`return_entry`、`first_merge_goal_id`、`goal_linked_to_writeback`。
+- 最低字段：基础字段、`source_combat_run_id`、`return_delay_active_time`、`return_entry`、`first_merge_goal_id`、`goal_linked_to_writeback`。
 - 回答：玩家是否回到主棋盘、为何回来、首个目标是否由战斗后果驱动。
 - 不采集：与该回流问题无关的长期棋盘历史。
+
+### 指标 → 最小事件对应
+
+| 指标 / 问题 | 必需事件 | 派生边界 |
+|---|---|---|
+| 外置阶段时长、频次、恢复/回写 | `outer_flow_phase_changed` + 回写/返回事件 | 必须配对同尺度、同 `flow_instance_id` 的进入/退出 |
+| 准备转化、放弃与反复进入 | 准备 viewed/changed/exited + `combat_started` | `prepare_instance_id` 不复用；正式开战才有 `combat_run_id` |
+| TTK | `combat_unit_became_damageable` + `combat_unit_resolved` | 同 `unit_instance_id`；按死亡/失效/逃离分组 |
+| 击杀间隔与首尾哨兵 | `combat_started` + `combat_unit_resolved(resolve_reason=kill)` + `combat_resolved` | 无击杀局单列，不并入普通区间 |
+| 首次有效反馈 / 自动配置触发 | `combat_started` + `combat_choice_effect_triggered` + 因果卡事件 | 首次触发不自动等于玩家理解，需质化复核 |
+| 窗口曝光、未输入与延迟 | `combat_intervention_window_changed` + `combat_intervention_used` | 匹配同一 `window_id`；缺关闭事件视为数据缺失 |
+| 两种资源口径 | `combat_started` + 资源 supplied/consumed + `combat_resolved` | 只比较同一 `resource_accounting_version` |
+| 压力峰值、斜率、方差、CurveMAE | `combat_pressure_snapshot` + `combat_resolved` | 结算后派生 `tau`；只比较同采样/归一化版本 |
+| 因果卡展开与进入可改项 | `combat_attribution_card_interacted` | `shown`、`expanded`、`next_action_selected` 分开计数 |
 
 ## 四层验证
 
@@ -110,7 +189,7 @@
 
 核心问题：玩家是否理解目标、威胁、可用输入和准备项对应关系？
 
-- 量化：准备页停留、目标首次受损前退出、阶段识别、窗口曝光后输入、首次有效反馈时间。
+- 量化：准备页进入→开始/放弃、目标首次受损前退出、窗口曝光/未输入、自动/手动配置首次有效反馈时间；事件只证明曝光与响应，不把它冒充认知理解。
 - 质化：开战前复述“要保护/送达什么”；首次受损后指出危险来源。
 - `[HYPOTHESIS]` 若事件显示触发但玩家复述错误，判为看懂失败，不得按“系统正常生效”放行。
 
@@ -118,7 +197,7 @@
 
 核心问题：玩家能否说明哪个 Merge/经营选择造成哪个战斗结果？
 
-- 量化：配置与目标损失/资源余量/阶段结果的关联、因果卡展开、失败原因与改配类型的一致性。
+- 量化：`combat_choice_effect_triggered` 与目标损失/资源口径/阶段结果的关联、因果卡展示→展开→下一动作、失败原因与改配类型的一致性。
 - 质化：战后请玩家说出“最有帮助的一项准备”“一个失败点”“下次改什么”。
 - `[HYPOTHESIS]` 只说“战力不够”“等级低”视为核心接口归因失败，除非本次测试本来就在验证普通成长门槛。
 
@@ -126,7 +205,7 @@
 
 核心问题：信息是否促成可替代选择，而非所有人复制同一最优解？
 
-- 量化：准备修改率、配置熵、同配置跨词缀表现、窗口时机分布、失败后改配与原样重试比例。
+- 量化：准备实例内修改率、配置熵、同配置跨词缀表现、窗口曝光→输入时机分布、失败后改配与原样重试比例。
 - 质化：玩家能否说出至少两种方案的收益/代价，且选择与路线所有权一致。
 - `[HYPOTHESIS]` 选择分布集中不自动等于失败；必须结合对手/路线是否相同和该方案是否在所有场景支配。
 
@@ -134,7 +213,7 @@
 
 核心问题：战斗后果是否自然创造新的 Merge/经营行动？
 
-- 量化：世界回写完成、返回 Merge、首个 Merge 目标与回写关联、修复/补给/培育/重装行为、稍后自然回流。
+- 量化：三尺度 `outer_flow_phase_changed` 的恢复/回写完成、世界回写→返回 Merge、首个 Merge 目标与回写关联、修复/补给/培育/重装行为、稍后自然回流。
 - 质化：玩家是否认为“我要回去处理这个后果”，而不是只为领取奖励。
 - `[HYPOTHESIS]` 返回棋盘但首个目标与战斗无关，只能证明导航，不证明三环闭合。
 
@@ -198,7 +277,9 @@
 ## 数据质量与边界
 
 - `[HYPOTHESIS]` 校验事件唯一性、顺序、丢失、重复、断线恢复、前后台时间和版本一致性后再计算曲线。
-- `[HYPOTHESIS]` `combat_resolved`、`world_writeback_applied` 与 `merge_returned_after_combat` 必须可通过 `combat_run_id` 串联；不能串联的数据不用于闭环结论。
-- `[HYPOTHESIS]` 录像/高频轨迹只对明示测试样本启用，遵守目标市场隐私、年龄与数据最小化要求。
+- `[HYPOTHESIS]` 准备事件按 `prepare_instance_id` 串联；`combat_started` 同时携带准备实例并生成 `combat_run_id`；战斗、回写与返回事件再按该正式战斗 ID 串联。不能满足这条链的数据不用于转化或闭环结论。
+- `[HYPOTHESIS]` 压力曲线只使用能连接 `combat_pressure_snapshot → combat_resolved`，且 `sampling_policy_version` / `pressure_normalization_version` 完整的局；`tau` 一律在结算后派生。
+- `[HYPOTHESIS]` 外置曲线只使用能按 `flow_scale + flow_instance_id` 配对进入/退出的阶段；缺失退出单独进入中断率，不用于完整时长占比。
+- `[HYPOTHESIS]` 录像/高频轨迹只对明示测试样本启用；常规版本只采固定/状态变化聚合快照，并遵守目标市场隐私、年龄与数据最小化要求。
 - `[HYPOTHESIS]` 不用单一均值放行；至少查看分布、生命周期、胜负、配置、设备性能和 A/B/C 路线差异。
 - `[HYPOTHESIS]` 遥测显示相关性时不得直接声称因果；正式改动用对照实验、隔离变量或重复可控样本验证。

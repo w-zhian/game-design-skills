@@ -17,7 +17,7 @@
 
 - `[OBSERVED]` 当前项目没有竞品内部战斗遥测、隐藏公式或可比的精确阶段阈值。
 - `[INFERRED]` 因此本文件的时间、阶段边界、目标压力、权重和阈值只能作为原型起点，不能称为行业基准。
-- `[HYPOTHESIS]` 所有局内原型使用归一化时间 `tau=t/T`，其中 `t` 是自可操作战斗开始后的时间，`T` 是该局从开始到可解释结算的总时长。暂停、断线和后台时间应从 `t` 中剔除。
+- `[HYPOTHESIS]` 所有局内原型使用归一化时间 `tau=t/T`，其中 `t` 是自可操作战斗开始后的活跃时间，`T` 是该局在 `combat_resolved` 记录的实际总活跃时长。运行时只采集 `elapsed_active_time`；结算前不知道最终 `T`，因此 `tau` 必须在结算后派生，不能由客户端实时上报。
 - `[HYPOTHESIS]` 原型先比较曲线形状，再比较绝对时长；拿到实测后允许整体替换 `T`，而不改五阶段语义。
 
 ## 外置节奏曲线
@@ -53,6 +53,32 @@
 - `[HYPOTHESIS]` 同一主题同时改变 Merge 订单、经营约束和战斗词缀；不为战斗复制独立棋盘、货币与通行证。
 - `[HYPOTHESIS]` 周末高潮可以复用已验证主形态并增加一项组合压力；完整 Boss、实时 PvP 或跨服只在专项证据成立后解锁。
 - `[HYPOTHESIS]` 周活动结束必须留下至少一种非数值世界变化，例如修复空间、生态记录、路线开放或角色关系；否则活动只在抽走主循环注意力。
+
+### 外置曲线的可测合同
+
+三种尺度统一发送 `outer_flow_phase_changed` 的进入/退出事件，使用 `flow_scale + flow_instance_id` 分组；事件最低字段见 `05-telemetry-and-validation.md`。
+
+| 尺度 | 阶段 ID 顺序 `[HYPOTHESIS]` | 实例边界 | 必测输出 |
+|---|---|---|---|
+| 单次会话 | `low_pressure_return → prepare → combat_peak → recovery → writeback` | `session_id` 内第一次核心回流到退出/后台切分 | 各阶段活跃时长占比、准备→战斗转化、风险检验频次、恢复完成、回写完成、战后回 Merge |
+| 章节 / 日 | `goal → preparation → risk_check → recovery_writeback → next_hook` | 一个版本化章节日/自然日目标实例 | 各阶段跨会话累计时长、风险检验次数与间隔、恢复完成、下一章钩子到达、未完成原因 |
+| 周活动 | `joint_prep → escalating_checks → mid_recovery → climax → permanent_writeback` | 一个活动版本与玩家的参与实例 | 各阶段参与天数/活跃时长、检验频次与递增顺序、周中改配、高潮到达、永久回写完成 |
+
+计算定义：
+
+- `DurationShare_(s,p) = active_duration_in_phase_(s,p) / total_active_duration_s`；阶段进入后缺少退出事件的实例不进入完整时长样本，并单独报告中断率。
+- `TransitionRate_(p→q) = instances_entering_q / instances_exiting_p`；跳阶段和重复进入分别报告，不能被平均隐藏。
+- `RiskFrequency_s = risk_checks_started / flow_instances_started`；同时报告相邻风险检验的活跃时间/自然时间间隔分布。
+- `RecoveryCompletion_s = recovery_phases_exited_as_completed / recovery_phases_entered`。
+- `WritebackCompletion_s = flow_instances_with_required_writeback_completed / flow_instances_with_risk_resolved`；“required”由 `outer_flow_curve_version` 声明。
+- `FlowClosure_s = flow_instances_exiting_final_phase / flow_instances_entering_first_phase`。
+
+目标与替换：
+
+1. `[HYPOTHESIS]` 每个 `outer_flow_curve_version` 先声明阶段顺序、目标时长占比区间、风险检验频次/间隔、恢复与回写完成门槛；这些目标来自本项目原型，不引用竞品阈值。
+2. 实测按尺度、路线、生命周期和完成/中断分群，对比 `DurationShare` 向量误差、转移率差、风险频次/间隔分布、恢复完成与回写完成。
+3. `[HYPOTHESIS]` 若阶段顺序和因果成立，只是时长/频次偏离，则替换目标占比或入口节奏；若大量实例跳过准备/恢复/回写，按结构问题重写外置循环，不能只拉长会话。
+4. `[HYPOTHESIS]` 新目标版本必须记录旧目标、实测分布、替换原因和预期移动指标；会话、章节/日、周三层分别版本化，避免一层调优掩盖另一层断链。
 
 ## 局内五阶段心流
 
@@ -93,21 +119,21 @@
 
 - 用途：比较同一敌人/目标在配置、阶段和玩家分群间的处理时间。
 - `[HYPOTHESIS]` 原型只设置相对顺序：基础威胁 TTK < 干扰威胁 TTK < 阶段目标 TTK；不引用竞品精确秒数。
-- 替换：实测用首次可伤害时间到死亡/失效时间的分布替代公式估计，并分离停火、转火和无目标时间。
+- 替换：实测用同一 `unit_instance_id` 的 `combat_unit_became_damageable` 到 `combat_unit_resolved` 的活跃时间分布替代公式估计，并按死亡/失效/逃离分组；停火、转火和无目标时间通过受控轨迹另行解释。
 
 ### 2. 首次有效反馈时间
 
 定义：`T_first_feedback = t(first_effect_attributable_to_player_choice) - t(combat_start)`。
 
 - “有效”要求玩家能把变化关联到战前配置或战中输入；纯伤害飘字不自动算有效。
-- 替换：结合事件日志与访谈编码；若触发了反馈但玩家未识别，计为可见性失败而非时间达标。
+- 替换：从首个 `combat_choice_effect_triggered`（包括 `trigger_mode=automatic` 的配置触发）计算，并结合反馈 cue、因果卡展开和访谈编码；若触发了反馈但玩家未识别，计为可见性失败而非时间达标。
 
 ### 3. 单位击杀间隔
 
-定义：对相邻有效击杀时间戳求 `Delta_kill_i = t_kill_i - t_kill_(i-1)`；同时报告中位数、分位数与最长空窗。
+定义：按 `combat_unit_resolved(resolve_reason=kill)` 的活跃时间排序。内部区间为 `Delta_kill_i = t_kill_i - t_kill_(i-1)`；另加入首尾哨兵：`Delta_open = t_first_kill - t_combat_start`，`Delta_tail = t_combat_resolved - t_last_kill`。无击杀局把整局活跃时长作为 `no_kill_interval` 单独报告，不伪造成普通击杀间隔。
 
 - 用途：发现前段无反馈、阶段中垃圾时间或瞬时清屏。
-- 替换：目标并非固定间隔，而是与五阶段“建立规则—升级—反转—收束”的节拍一致。
+- 替换：同时报告首尾哨兵、内部区间的中位数/分位数与最长空窗；目标并非固定间隔，而是与五阶段“建立规则—升级—反转—收束”的节拍一致。
 
 ### 4. 目标损失率
 
@@ -118,14 +144,18 @@
 
 ### 5. 资源余量
 
-定义：`ResourceRemaining_r = remaining_r / initial_or_available_r`，按资源类型分别报告；零初始量不得参与除法。
+按资源类型和固定 `resource_accounting_version` 拆成两个口径：
+
+- **初始资源保留率**：`InitialRetention_r = max(initial_r - consumed_from_initial_r, 0) / initial_r`。`consumed_from_initial_r` 按版本化的消耗分配规则计算；只回答出战携带的初始资源还保留多少，`initial_r=0` 时记为不适用。
+- **累计供给消耗率**：`SupplyConsumption_r = consumed_r / (initial_r + supplied_in_run_r)`。只回答整局可用供给被消耗多少；分母为零时记为不适用。
 
 - 用途：判断胜利是否过度富余、失败是否因单一资源耗尽、连续路线是否有后续选择。
-- 替换：实测后检查资源余量与胜负、近失败、撤退和重试的关系，不把“越少越刺激”当目标。
+- 跨局比较：同一资源必须固定单位、初始量定义、局内供给计入规则和消耗分配规则；只比较相同 `resource_accounting_version`。
+- 替换：实测后分别检查两种口径与胜负、近失败、撤退和重试的关系，不把“越少越刺激”当目标。
 
 ### 6. 干预窗口
 
-定义：每个窗口记录 `window_open`、`window_close`、玩家是否识别、是否输入、输入延迟与结果；总体可报告 `sum(valid_window_duration) / T`。
+定义：用 `combat_intervention_window_changed` 记录窗口曝光/关闭，并与 `combat_intervention_used` 关联输入；总体可报告 `sum(valid_window_duration) / T`、窗口未输入率与输入延迟。事件只能证明 cue 已曝光和是否响应，认知上的“识别”需由访谈/受控任务确认。
 
 - `[HYPOTHESIS]` 窗口数量不是深度指标；一个能改变目标/空间/资源的窗口优于多个同质点击。
 - 替换：以识别率、选择差异、成功/失败后复述和策略分布校准窗口长度。
@@ -152,23 +182,31 @@
 - `ControlLoss`：不可用空间、被控单位、路线封锁或目标失控比例。
 - `RequiredInputDensity`：单位有效时间内必须辨认并处理的不同决策窗口。
 
+### 归一化与采样版本
+
+- `pressure_normalization_version` 必须为每个组件声明：原始聚合量、单位、低/高锚点、方向、截断和缺失值规则。对“数值越高压力越高”的组件使用 `x_norm = clamp((x_raw-L)/(H-L), 0, 1)`；反向组件由版本显式声明，不在查询时临时翻转。
+- `sampling_policy_version` 必须声明固定活跃时间采样策略与额外状态变化触发器；状态变化快照用于保留尖峰，固定采样用于保证不同局可比较。
+- `combat_pressure_snapshot` 同时记录原始聚合量和归一化组件，不记录逐个单位位置。不同归一化或采样版本不直接并表；若必须比较，先用同一规则离线重算。
+- 运行时所有快照只记 `elapsed_active_time`。收到 `combat_resolved.elapsed_active_time=T_actual` 后，离线派生每个快照的 `tau=elapsed_active_time/T_actual`。
+
 ## 压力指数与目标曲线
 
 `[HYPOTHESIS]` 五阶段阶段均值目标向量可从 `(0.15, 0.30, 0.60, 0.90, 0.35)` 起步；它只描述“低—建立—上升—峰值—回落”的形状，不是竞品阈值。
 
 ### 对照方法
 
-1. 将每局有效时间转换为 `tau`，按统一采样点或阶段聚合。
-2. 分玩家分群、胜负、配置和遭遇版本计算 `P_measured(tau)`，同时保留组成项，避免平均值掩盖问题。
-3. 比较阶段均值误差、峰值位置误差、峰后回落斜率、阶段内方差和目标损失/资源余量的共同变化。
-4. 使用 `CurveMAE = mean(|P_measured(tau)-P_target(tau)|)` 作为形状误差；同时检查关键峰值和失败原因，不能用单一总分放行。
-5. 把事件时间线、录像、访谈复述与曲线叠加。若曲线显示峰值但玩家没有识别，判为可读性问题。
+1. 用实际 `T` 把 `combat_pressure_snapshot.elapsed_active_time` 转换为 `tau`；缺少结算或有效快照的局只进入数据质量报告。
+2. 按 `sampling_policy_version` 把固定采样与状态变化快照合并，在统一 `tau` 网格上采用版本声明的保持/插值规则重采样。`combat_phase_entered` 只标注阶段，不替代曲线采样。
+3. 分玩家分群、胜负、配置和遭遇版本计算 `P_measured(tau)`，同时保留五个组件，避免平均值掩盖问题。
+4. 从重采样曲线计算阶段均值、峰值位置、峰后回落斜率、阶段内方差；再与目标损失、两种资源口径和事件时间线联合解释。
+5. 使用 `CurveMAE = mean(|P_measured(tau)-P_target(tau)|)` 作为形状误差；同时检查关键峰值和失败原因，不能用单一总分放行。
+6. 把录像、访谈复述、配置触发、窗口和因果卡事件叠加。若曲线显示峰值但玩家没有识别，判为可读性问题。
 
 ## 实测替换流程
 
 | 顺序 | 动作 | 替换对象 | 产出 |
 |---|---|---|---|
-| 1 | 灰盒录制事件与完整轨迹 | 原型时长、事件时间、资源消耗 | 每局 `tau` 时间线 |
+| 1 | 灰盒录制最小事件与版本化压力快照 | 原型时长、事件时间、资源消耗 | 结算后派生的每局 `tau` 时间线 |
 | 2 | 观察玩家并做战后复述 | 首次有效反馈、窗口识别、归因 | “触发”与“被理解”两套字段 |
 | 3 | 按胜负与配置分群 | TTK、损失率、余量、近失败 | 分布而非单均值 |
 | 4 | 拟合实际阶段边界 | 五阶段 `tau` 边界和目标压力 | 新版本曲线假设 |
