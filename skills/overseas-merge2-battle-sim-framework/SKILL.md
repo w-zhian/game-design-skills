@@ -5,21 +5,13 @@ description: >-
   Product-level routing and decision framework for overseas Merge-2 games that
   connect merge, management, and combat. Use for: Merge-2 combat integration,
   merge-management loops, product-route comparison, feasibility review, MVP
-  scope decisions, and evidence-led evaluation of related concepts. Route
-  specialist requests to the repository skills listed below instead of
-  duplicating their guidance.
-legacy_description: |
-  主打海外市场的二合战斗模拟经营产品决策框架。基于79个不重复公开来源，
-  提炼7个核心心智模型、10条决策启发式、三条经过调研的产品路线与完整验证协议。
-  用于设计或评审 Merge-2 × 战斗 × 模拟经营游戏，覆盖核心循环、受众定位、
-  物品链、战斗嵌入、经济、商业化、LiveOps、真实买量素材、MVP 与立项取舍。
-  当用户提到「二合战斗」「Merge-2经营」「合成+战斗」「合成链怎么接战斗」
-  「模拟经营加塔防」「经营远征闭环」「二合物品链」「Merge能量经济」
-  「合成游戏买量真实性」「Last Light Motel」「Mythic Caravan」「Dustbound Convoy」
-  「三案孵化」「评审二合玩法」「Merge game economy」「A/B/C路线」「方案A/B/C」
-  「给某路线增加/删除玩法」「继续修改三案」时使用。
-  「联盟掠夺」「公会战」「异步联盟」「实时PvP」「跨服4X」只有在同一上下文
-  已出现 Merge-2、二合、合成经营或 A/B/C 路线时才触发，不要仅凭宽泛词单独激活。
+  scope decisions, and evidence-led evaluation of related concepts, including
+  二合战斗, Merge-2经营, 合成+战斗, 合成链怎么接战斗, 模拟经营加塔防,
+  经营远征闭环, 二合物品链, Merge能量经济, Last Light Motel, Mythic
+  Caravan, Dustbound Convoy, and A/B/C route comparison. Route specialist
+  requests to the repository skills listed below instead of duplicating their
+  guidance. Alliance, guild, PvP, or 4X terms trigger this Skill only when the
+  same context also establishes a Merge-2, merge-management, or A/B/C route.
 ---
 
 # 海外二合战斗模拟经营 · 产品决策框架
@@ -282,7 +274,7 @@ Merge、经营、战斗必须互相改变下一环输入。只把三套玩法放
 应用：
 
 - 一周一个主主题，三个系统共用奖励地图。
-- 约 70% 参数/主题复用、20% 新内容、10% 新系统。
+- [HYPOTHESIS] 可调起点：约 70% 参数/主题复用、20% 新内容、10% 新系统；必须用疲劳与收入数据校准。
 - 最多三个常驻核心货币和两个同时可见活动代币。
 
 局限：
