@@ -58,6 +58,7 @@
 - 时钟：这里的 `elapsed_active_time` 是当前 `flow_instance_id` 自开始以来的累计活跃时钟。前后台暂停、跨会话离线和超过统一无操作阈值的时间不累计；恢复后的值从暂停点继续，不能用墙钟差或当前 `session_id` 时长替代。
 - 切分与恢复：暂停/会话切分时用 `exited(completion_reason=paused)` 结束当前活跃段；章节/日、周实例若尺度版本声明的身份与恢复窗仍有效，则下次会话沿用同一 `flow_instance_id` 和 `outer_flow_curve_version`，对同阶段重新发 `entered`。单次会话尺度在新会话新建实例。活动过期、版本变化或超出恢复窗时关闭旧实例并新建，不能拼接累计时钟。
 - 派生：阶段活跃时长按同一 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 配对每个 entered/exited 活跃段，并求 `exit.elapsed_active_time - enter.elapsed_active_time` 后累加；暂停间隔因此天然排除，未配对段只计中断率。
+- 完成口径：恢复完成率的分母是至少进入过 recovery 的 distinct `flow_instance_id`，分子是其中至少一次以 `completion_reason=completed` 退出 recovery 的 distinct 实例。相邻阶段转化只纳入前一阶段完成退出的 distinct 实例；`paused` / `interrupted` / `expired` 和重复 `entered` 单列。
 
 ### `combat_prepare_viewed` — 准备页进入
 
@@ -145,9 +146,9 @@
 
 ### `combat_resolved` — 胜负
 
-- 最低字段：基础字段、`combat_run_id`、`result`、`elapsed_active_time`（实际 `T`）、`last_phase_id`、`objective_final_state`、`resource_final_state`、`resource_accounting_version`、`failure_reason_code`、`attribution_cards_shown`、`near_fail_flag`。
+- 最低字段：基础字段、`combat_run_id`、`result`、`elapsed_active_time`（实际 `T`）、`last_phase_id`、`objective_final_state`、`resource_final_state`、`resource_accounting_version`、`failure_reason_code`、`attribution_cards_shown`、`near_fail_flag`、`near_fail_condition_version`。
 - 回答：为何结束、代价如何、系统向玩家解释了什么。
-- `[HYPOTHESIS]` `near_fail_flag` 必须引用版本化的 `near_fail_condition`，不可由客户端随意判定。
+- `[HYPOTHESIS]` `near_fail_flag` 必须引用 `near_fail_condition_version` 指向的版本化 `near_fail_condition`，不可由客户端随意判定。
 
 ### `combat_attribution_card_interacted` — 因果卡展示 / 展开 / 选项
 
@@ -177,7 +178,7 @@
 
 | 指标 / 问题 | 必需事件 | 派生边界 |
 |---|---|---|
-| 外置阶段时长、频次、恢复/回写 | `outer_flow_phase_changed` + 回写/返回事件 | 必须配对同 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 的进入/退出活跃段；暂停段可跨会话累加，版本间不混算 |
+| 外置阶段时长、频次、恢复/回写 | `outer_flow_phase_changed` + 回写/返回事件 | 必须配对同 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 的进入/退出活跃段；恢复完成和相邻阶段转化按 distinct `flow_instance_id` 计算，只接受 `completion_reason=completed`，暂停/中断/重入单列；版本间不混算 |
 | 准备转化、放弃与反复进入 | 准备 viewed/changed/exited + `combat_started` | `prepare_instance_id` 不复用；正式开战才有 `combat_run_id` |
 | TTK | `combat_unit_became_damageable` + `combat_unit_resolved` | 同 `unit_instance_id`；按死亡/失效/逃离分组 |
 | 击杀间隔与首尾哨兵 | `combat_started` + `combat_unit_resolved(resolve_reason=kill)` + `combat_resolved` | 无击杀局单列，不并入普通区间 |
@@ -185,6 +186,7 @@
 | 窗口曝光、未输入与延迟 | `combat_intervention_window_changed` + `combat_intervention_used` | 匹配同一 `window_id`；缺关闭事件视为数据缺失 |
 | 两种资源口径 | `combat_started` + 资源 supplied/consumed + `combat_resolved` | 只比较同一 `resource_accounting_version` |
 | 压力峰值、斜率、方差、CurveMAE | `combat_pressure_snapshot` + `combat_resolved` | 结算后派生 `tau`；只比较同采样/归一化版本 |
+| 近失败占比 | `combat_resolved` | 只比较同 `near_fail_condition_version`；条件版本变化前后的历史 cohort 不混算 |
 | 因果卡展开与进入可改项 | `combat_attribution_card_interacted` | `shown`、`expanded`、`next_action_selected` 分开计数 |
 
 ## 四层验证
@@ -284,6 +286,8 @@
 - `[HYPOTHESIS]` 准备事件按 `prepare_instance_id` 串联；`combat_started` 同时携带准备实例并生成 `combat_run_id`；战斗、回写与返回事件再按该正式战斗 ID 串联。不能满足这条链的数据不用于转化或闭环结论。
 - `[HYPOTHESIS]` 压力曲线只使用能连接 `combat_pressure_snapshot → combat_resolved`，且 `sampling_policy_version` / `pressure_normalization_version` 完整的局；`tau` 一律在结算后派生。
 - `[HYPOTHESIS]` 外置曲线只使用能按 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 配对进入/退出的活跃段；验证累计时钟不含暂停/跨会话离线且恢复时不倒退。缺失退出单独进入中断率，不用于完整时长占比；不同尺度或版本不直接并表。
+- `[HYPOTHESIS]` 外置恢复完成率的进入与完成均按 distinct `flow_instance_id` 去重；相邻阶段转化只纳入 `completion_reason=completed` 的实例。`paused` / `interrupted` / `expired` 和重复进入单独报告，不得改变完成转化分子或分母。
+- `[HYPOTHESIS]` 近失败指标只使用同一 `near_fail_condition_version` 的 `combat_resolved`；版本缺失的局进入数据质量报告，条件版本变化前后的历史 cohort 不混算。
 - `[HYPOTHESIS]` 录像/高频轨迹只对明示测试样本启用；常规版本只采固定/状态变化聚合快照，并遵守目标市场隐私、年龄与数据最小化要求。
 - `[HYPOTHESIS]` 不用单一均值放行；至少查看分布、生命周期、胜负、配置、设备性能和 A/B/C 路线差异。
 - `[HYPOTHESIS]` 遥测显示相关性时不得直接声称因果；正式改动用对照实验、隔离变量或重复可控样本验证。

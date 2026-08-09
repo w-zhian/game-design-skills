@@ -69,9 +69,9 @@
 计算定义：
 
 - `DurationShare_(s,v,p) = active_duration_in_phase_(s,v,p) / total_active_duration_(s,v)`，其中 `s=flow_scale`、`v=outer_flow_curve_version`；阶段进入后缺少退出事件的活跃段不进入完整时长样本，并单独报告中断率。
-- `TransitionRate_(s,v,p→q) = instances_entering_q / instances_exiting_p`；跳阶段和重复进入分别报告，不能被平均隐藏。
+- `TransitionRate_(s,v,p→q) = distinct flow_instance_id entering q after a completed exit from p / distinct flow_instance_id exiting p with completion_reason=completed`；只有完成退出才进入相邻阶段转化口径。`paused` / `interrupted` / `expired`与重复进入分别报告，不混入完成转化，也不能被平均隐藏。
 - `RiskFrequency_(s,v) = risk_checks_started / flow_instances_started`；同时报告相邻风险检验的活跃时间/自然时间间隔分布。
-- `RecoveryCompletion_(s,v) = recovery_phases_exited_as_completed / recovery_phases_entered`。
+- `RecoveryCompletion_(s,v) = distinct flow_instance_id with at least one recovery exit where completion_reason=completed / distinct flow_instance_id with at least one recovery entered event`。同一实例的暂停后重入只保留一个分母资格；分子也按 distinct 实例去重。
 - `WritebackCompletion_(s,v) = flow_instances_with_required_writeback_completed / flow_instances_with_risk_resolved`；“required”由 `outer_flow_curve_version` 声明。
 - `FlowClosure_(s,v) = flow_instances_exiting_final_phase / flow_instances_entering_first_phase`。
 
