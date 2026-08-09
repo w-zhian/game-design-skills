@@ -22,7 +22,7 @@
 
 ## 公共字段
 
-所有事件至少继承以下基础字段；命名可由数据团队调整，但语义不可丢失。准备实例、正式战斗和外置流程使用不同上下文 ID，不得互相冒充。
+所有事件至少继承下表的必需基础字段；命名可由数据团队调整，但语义不可丢失。准备实例、正式战斗和外置流程使用不同上下文 ID，不得互相冒充。
 
 | 字段 | 用途 | 最小化说明 |
 |---|---|---|
@@ -32,8 +32,9 @@
 | `content_version` | 区分资源、逻辑和配置版本 | 必须能回溯参数集 |
 | `experiment_group` | 对照实验 | 无实验写明确的默认组 |
 | `route_id` | A / B / C 或经批准的新路线 | 用于所有权冲突分析 |
-| `encounter_id` | 遭遇模板 | 与难度/词缀分开 |
 | `player_stage` | 生命周期/章节分群 | 不记录无用途的完整账号档案 |
+
+条件字段不应为补齐 schema 而写入无意义值：`encounter_id` 只在事件属于准备、正式战斗，或某个外置阶段明确关联单一遭遇时填写；低压回流、跨遭遇恢复、章节/日与周活动阶段允许省略。外置事件即使携带 `encounter_id`，它也只是阶段关联字段，不能代替 `flow_instance_id`。
 
 ### 上下文 ID 生命周期
 
@@ -41,7 +42,7 @@
 |---|---|---|---|
 | `prepare_instance_id` | 每次准备页实际进入时新生成 | `combat_prepare_viewed/changed/exited`，并由 `combat_started` 原样携带 | 同一次准备内保持不变；退出后再次进入必须新建，不复用旧值 |
 | `combat_run_id` | 仅在 `combat_started` 时新生成 | 正式开战至结算、重试、回写和返回 Merge | 一个正式开战一个 ID；原样重试也生成新 ID，并用 `previous_combat_run_id` 连接 |
-| `flow_instance_id` | 会话、章节/日、周活动各自开始时生成 | `outer_flow_phase_changed` | 与 `flow_scale` 共同唯一；允许关联多个准备实例和战斗局 |
+| `flow_instance_id` | 会话、章节/日、周活动各自开始时生成 | `outer_flow_phase_changed` | 与 `flow_scale`、`outer_flow_curve_version` 共同唯一；允许关联多个准备实例和战斗局 |
 
 - `[HYPOTHESIS]` 准备上下文因开战、关闭、返回、切后台超时或切换遭遇而结束时发送 `combat_prepare_exited`；只有 `exit_reason=started` 且随后同一 `prepare_instance_id` 出现 `combat_started` 才算转化为正式战斗，其余原因记为放弃/中断准备。
 - `[HYPOTHESIS]` 同一会话再次进入同一遭遇仍生成新的 `prepare_instance_id`；`previous_prepare_instance_id` 只用于连接紧邻的同遭遇重进，不跨会话串联。
@@ -51,9 +52,12 @@
 
 ### `outer_flow_phase_changed` — 外置流程阶段进入 / 退出
 
-- 最低字段：基础字段、`flow_scale`（session / chapter_day / week）、`flow_instance_id`、`phase_id`、`transition`（entered / exited）、`elapsed_active_time`、`completion_reason`、可选的 `prepare_instance_id` / `combat_run_id`。
+- 最低字段：必需基础字段、`flow_scale`（session / chapter_day / week）、按尺度命名空间化的 `outer_flow_curve_version`（例如 `session:v1` / `chapter_day:v1` / `week:v1`）、`flow_instance_id`、`phase_id`、`transition`（entered / exited）、`elapsed_active_time`、退出时的 `completion_reason`（completed / paused / interrupted / expired）、可选的 `encounter_id` / `prepare_instance_id` / `combat_run_id`。
 - 回答：三种外置尺度各阶段持续多久、完成/中断在哪里、风险检验频次、恢复与回写是否闭合。
 - 不采集：阶段内每个普通 UI 行为；已有专项事件只通过 ID 关联。
+- 时钟：这里的 `elapsed_active_time` 是当前 `flow_instance_id` 自开始以来的累计活跃时钟。前后台暂停、跨会话离线和超过统一无操作阈值的时间不累计；恢复后的值从暂停点继续，不能用墙钟差或当前 `session_id` 时长替代。
+- 切分与恢复：暂停/会话切分时用 `exited(completion_reason=paused)` 结束当前活跃段；章节/日、周实例若尺度版本声明的身份与恢复窗仍有效，则下次会话沿用同一 `flow_instance_id` 和 `outer_flow_curve_version`，对同阶段重新发 `entered`。单次会话尺度在新会话新建实例。活动过期、版本变化或超出恢复窗时关闭旧实例并新建，不能拼接累计时钟。
+- 派生：阶段活跃时长按同一 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 配对每个 entered/exited 活跃段，并求 `exit.elapsed_active_time - enter.elapsed_active_time` 后累加；暂停间隔因此天然排除，未配对段只计中断率。
 
 ### `combat_prepare_viewed` — 准备页进入
 
@@ -173,7 +177,7 @@
 
 | 指标 / 问题 | 必需事件 | 派生边界 |
 |---|---|---|
-| 外置阶段时长、频次、恢复/回写 | `outer_flow_phase_changed` + 回写/返回事件 | 必须配对同尺度、同 `flow_instance_id` 的进入/退出 |
+| 外置阶段时长、频次、恢复/回写 | `outer_flow_phase_changed` + 回写/返回事件 | 必须配对同 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 的进入/退出活跃段；暂停段可跨会话累加，版本间不混算 |
 | 准备转化、放弃与反复进入 | 准备 viewed/changed/exited + `combat_started` | `prepare_instance_id` 不复用；正式开战才有 `combat_run_id` |
 | TTK | `combat_unit_became_damageable` + `combat_unit_resolved` | 同 `unit_instance_id`；按死亡/失效/逃离分组 |
 | 击杀间隔与首尾哨兵 | `combat_started` + `combat_unit_resolved(resolve_reason=kill)` + `combat_resolved` | 无击杀局单列，不并入普通区间 |
@@ -279,7 +283,7 @@
 - `[HYPOTHESIS]` 校验事件唯一性、顺序、丢失、重复、断线恢复、前后台时间和版本一致性后再计算曲线。
 - `[HYPOTHESIS]` 准备事件按 `prepare_instance_id` 串联；`combat_started` 同时携带准备实例并生成 `combat_run_id`；战斗、回写与返回事件再按该正式战斗 ID 串联。不能满足这条链的数据不用于转化或闭环结论。
 - `[HYPOTHESIS]` 压力曲线只使用能连接 `combat_pressure_snapshot → combat_resolved`，且 `sampling_policy_version` / `pressure_normalization_version` 完整的局；`tau` 一律在结算后派生。
-- `[HYPOTHESIS]` 外置曲线只使用能按 `flow_scale + flow_instance_id` 配对进入/退出的阶段；缺失退出单独进入中断率，不用于完整时长占比。
+- `[HYPOTHESIS]` 外置曲线只使用能按 `flow_scale + outer_flow_curve_version + flow_instance_id + phase_id` 配对进入/退出的活跃段；验证累计时钟不含暂停/跨会话离线且恢复时不倒退。缺失退出单独进入中断率，不用于完整时长占比；不同尺度或版本不直接并表。
 - `[HYPOTHESIS]` 录像/高频轨迹只对明示测试样本启用；常规版本只采固定/状态变化聚合快照，并遵守目标市场隐私、年龄与数据最小化要求。
 - `[HYPOTHESIS]` 不用单一均值放行；至少查看分布、生命周期、胜负、配置、设备性能和 A/B/C 路线差异。
 - `[HYPOTHESIS]` 遥测显示相关性时不得直接声称因果；正式改动用对照实验、隔离变量或重复可控样本验证。

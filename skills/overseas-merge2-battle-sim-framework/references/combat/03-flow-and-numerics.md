@@ -56,27 +56,29 @@
 
 ### 外置曲线的可测合同
 
-三种尺度统一发送 `outer_flow_phase_changed` 的进入/退出事件，使用 `flow_scale + flow_instance_id` 分组；事件最低字段见 `05-telemetry-and-validation.md`。
+三种尺度统一发送 `outer_flow_phase_changed` 的进入/退出事件，使用 `flow_scale + outer_flow_curve_version + flow_instance_id` 分组；其中 `outer_flow_curve_version` 必须对应当前尺度的阶段顺序、目标和计算口径版本，事件最低字段见 `05-telemetry-and-validation.md`。
 
 | 尺度 | 阶段 ID 顺序 `[HYPOTHESIS]` | 实例边界 | 必测输出 |
 |---|---|---|---|
-| 单次会话 | `low_pressure_return → prepare → combat_peak → recovery → writeback` | `session_id` 内第一次核心回流到退出/后台切分 | 各阶段活跃时长占比、准备→战斗转化、风险检验频次、恢复完成、回写完成、战后回 Merge |
-| 章节 / 日 | `goal → preparation → risk_check → recovery_writeback → next_hook` | 一个版本化章节日/自然日目标实例 | 各阶段跨会话累计时长、风险检验次数与间隔、恢复完成、下一章钩子到达、未完成原因 |
-| 周活动 | `joint_prep → escalating_checks → mid_recovery → climax → permanent_writeback` | 一个活动版本与玩家的参与实例 | 各阶段参与天数/活跃时长、检验频次与递增顺序、周中改配、高潮到达、永久回写完成 |
+| 单次会话 | `low_pressure_return → prepare → combat_peak → recovery → writeback` | `session_id` 内第一次核心回流到退出/后台切分；新会话新建实例 | 各阶段活跃时长占比、准备→战斗转化、风险检验频次、恢复完成、回写完成、战后回 Merge |
+| 章节 / 日 | `goal → preparation → risk_check → recovery_writeback → next_hook` | 一个版本化章节日/自然日目标实例；允许按同版本恢复跨会话实例 | 各阶段跨会话累计时长、风险检验次数与间隔、恢复完成、下一章钩子到达、未完成原因 |
+| 周活动 | `joint_prep → escalating_checks → mid_recovery → climax → permanent_writeback` | 一个活动版本与玩家的参与实例；允许按同版本恢复跨会话实例 | 各阶段参与天数/活跃时长、检验频次与递增顺序、周中改配、高潮到达、永久回写完成 |
+
+`elapsed_active_time` 在外置事件中专指当前 `flow_instance_id` 的累计活跃时钟，不是会话内时钟或墙钟。前后台暂停、会话之间的离线间隔和达到统一无操作阈值后的时间不累计；章节/日与周实例恢复时沿用暂停前的累计值，单次会话尺度则在新会话创建新实例。暂停/恢复用同阶段的 `exited(completion_reason=paused)` 与后续 `entered` 切成多个活跃段；阶段活跃时长为同实例、同版本、同 `phase_id` 的全部有效 `exit.elapsed_active_time - enter.elapsed_active_time` 之和。活动过期、口径版本变化或不满足恢复窗时关闭旧实例并新建实例，不跨实例拼接；缺少配对退出的段只进入中断率。
 
 计算定义：
 
-- `DurationShare_(s,p) = active_duration_in_phase_(s,p) / total_active_duration_s`；阶段进入后缺少退出事件的实例不进入完整时长样本，并单独报告中断率。
-- `TransitionRate_(p→q) = instances_entering_q / instances_exiting_p`；跳阶段和重复进入分别报告，不能被平均隐藏。
-- `RiskFrequency_s = risk_checks_started / flow_instances_started`；同时报告相邻风险检验的活跃时间/自然时间间隔分布。
-- `RecoveryCompletion_s = recovery_phases_exited_as_completed / recovery_phases_entered`。
-- `WritebackCompletion_s = flow_instances_with_required_writeback_completed / flow_instances_with_risk_resolved`；“required”由 `outer_flow_curve_version` 声明。
-- `FlowClosure_s = flow_instances_exiting_final_phase / flow_instances_entering_first_phase`。
+- `DurationShare_(s,v,p) = active_duration_in_phase_(s,v,p) / total_active_duration_(s,v)`，其中 `s=flow_scale`、`v=outer_flow_curve_version`；阶段进入后缺少退出事件的活跃段不进入完整时长样本，并单独报告中断率。
+- `TransitionRate_(s,v,p→q) = instances_entering_q / instances_exiting_p`；跳阶段和重复进入分别报告，不能被平均隐藏。
+- `RiskFrequency_(s,v) = risk_checks_started / flow_instances_started`；同时报告相邻风险检验的活跃时间/自然时间间隔分布。
+- `RecoveryCompletion_(s,v) = recovery_phases_exited_as_completed / recovery_phases_entered`。
+- `WritebackCompletion_(s,v) = flow_instances_with_required_writeback_completed / flow_instances_with_risk_resolved`；“required”由 `outer_flow_curve_version` 声明。
+- `FlowClosure_(s,v) = flow_instances_exiting_final_phase / flow_instances_entering_first_phase`。
 
 目标与替换：
 
-1. `[HYPOTHESIS]` 每个 `outer_flow_curve_version` 先声明阶段顺序、目标时长占比区间、风险检验频次/间隔、恢复与回写完成门槛；这些目标来自本项目原型，不引用竞品阈值。
-2. 实测按尺度、路线、生命周期和完成/中断分群，对比 `DurationShare` 向量误差、转移率差、风险频次/间隔分布、恢复完成与回写完成。
+1. `[HYPOTHESIS]` 每个 `flow_scale + outer_flow_curve_version` 先声明阶段顺序、目标时长占比区间、风险检验频次/间隔、恢复与回写完成门槛，以及暂停、恢复窗和实例关闭规则；这些目标来自本项目原型，不引用竞品阈值。
+2. 实测先按 `flow_scale + outer_flow_curve_version` 隔离，再按路线、生命周期和完成/中断分群，对比 `DurationShare` 向量误差、转移率差、风险频次/间隔分布、恢复完成与回写完成；不同尺度或版本不直接合并。
 3. `[HYPOTHESIS]` 若阶段顺序和因果成立，只是时长/频次偏离，则替换目标占比或入口节奏；若大量实例跳过准备/恢复/回写，按结构问题重写外置循环，不能只拉长会话。
 4. `[HYPOTHESIS]` 新目标版本必须记录旧目标、实测分布、替换原因和预期移动指标；会话、章节/日、周三层分别版本化，避免一层调优掩盖另一层断链。
 
