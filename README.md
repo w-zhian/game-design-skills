@@ -23,11 +23,12 @@
 | qa-review | 1.0.0 | 跨模块一致性/配表校验/边界检查 |
 | skill-evolution | 1.0.0 | 元 skill：从使用中反思→固化经验 |
 | article-curation | 1.0.0 | 每日从 GameRes 游戏策划版块摘取系统/战斗/关卡/数值方向优质文章，生成日报 |
+| overseas-merge2-battle-sim-framework | 2.0.0 | 海外二合一 × 战斗 × 模拟经营产品决策、遭遇/心流设计与原型验证 |
 
 ## 支持文件
 
-- 每个技能均保留其 `references/` 目录（共 21 个引用文件，如
-  `formula-toolkit.md`、`combat-framework.md`、`economy-framework.md` 等）。
+- 各 Skill 可按需包含 `references/`，用于沉淀与其职责相匹配的方法、案例和验证材料。
+- `overseas-merge2-battle-sim-framework` 额外包含 research/combat/validation 证据链，支撑市场研究、战斗设计与原型验证决策。
 - 跨技能共享引用放在 `skills/_shared/references/`：设计宪法、质量评分标准、
   功能简报模板、系统设计文档模板、试玩报告模板。
 - 各 SKILL.md 中对共享引用的路径已由 `_shared/references/...` 改写为
