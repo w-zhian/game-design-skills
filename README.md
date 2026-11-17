@@ -24,6 +24,7 @@
 | skill-evolution | 1.0.0 | 元 skill：从使用中反思→固化经验 |
 | article-curation | 1.0.0 | 每日从 GameRes 游戏策划版块摘取系统/战斗/关卡/数值方向优质文章，生成日报 |
 | overseas-merge2-battle-sim-framework | 2.0.0 | 海外二合一 × 战斗 × 模拟经营产品决策、遭遇/心流设计与原型验证 |
+| excel-table-ux-designer | 1.0.0 | Excel 表格排版 UX：诊断 xlsx 排版问题（P0/P1/P2）、按配置表/汇报表双模改造、配色与对比度规范 |
 
 ## 支持文件
 
@@ -33,6 +34,12 @@
   功能简报模板、系统设计文档模板、试玩报告模板。
 - 各 SKILL.md 中对共享引用的路径已由 `_shared/references/...` 改写为
   `../_shared/references/...`，以匹配 `skills/_shared/` 的新相对位置。
+- `excel-table-ux-designer`（v2.5.0 新增）是首个带**可运行脚本**的技能：
+  - `scripts/diagnose.py` — 只读体检器，20 余项检查分 P0/P1/P2
+  - `scripts/beautify.py` — 改造器，强制自动备份 + 双模（config/report）+ `--dry-run` 预演
+  - `scripts/make_sample.py` — 生成「故意很烂」的回归样本，改脚本后用它自测
+  - 另含 `references/source-audit.md`：记录来源审计结果，明确标注哪些结论可直接采信、
+    哪些引文是二手转述（不可当原话引用），以及两轮审计中修正的 9 处问题。
 - GameRes 老文知识蒸馏（v2.3.0 新增，源自 27088 帖全量索引中评分最高的方法论文章）：
   - `numerical-planning/references/gameres-probability-and-change.md` — 概率期望
     递推/循环模拟、正态伪随机、导数视角建模

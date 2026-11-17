@@ -1,15 +1,15 @@
 {
   "name": "game-design-skills",
   "displayName": "游戏设计技能包",
-  "version": "2.4.0",
-  "description": "Self-evolving game design skill pack for game planners: overseas Merge-2 / hybrid combat-management product design, numerical planning, combat, system, economy and gameplay design, QA review, and a skill-evolution meta-skill.",
-  "descriptionZh": "面向游戏策划的可自进化技能包：海外二合一、战斗与模拟经营混合设计，以及数值规划、系统设计、经济设计、玩法设计、质量审查和 skill-evolution 自进化元技能。",
+  "version": "2.5.0",
+  "description": "Self-evolving game design skill pack for game planners: overseas Merge-2 / hybrid combat-management product design, numerical planning, combat, system, economy and gameplay design, QA review, Excel table layout UX design, and a skill-evolution meta-skill.",
+  "descriptionZh": "面向游戏策划的可自进化技能包：海外二合一、战斗与模拟经营混合设计，以及数值规划、系统设计、经济设计、玩法设计、质量审查、Excel 表格排版 UX 设计和 skill-evolution 自进化元技能。",
   "author": { "name": "w-zhian (决明子)" },
   "homepage": "https://github.com/w-zhian/game-design-skills",
   "repository": "https://github.com/w-zhian/game-design-skills",
   "logo": "./assets/avatar.svg",
-  "keywords": ["qoder-plugin", "skill", "game-design", "game-planning", "merge-2", "hybrid-combat"],
+  "keywords": ["qoder-plugin", "skill", "game-design", "game-planning", "merge-2", "hybrid-combat", "excel", "table-design", "openpyxl"],
   "category": "developer-tools",
-  "tags": ["skill", "game-design", "numerical-design", "merge-2", "hybrid-combat"],
+  "tags": ["skill", "game-design", "numerical-design", "merge-2", "hybrid-combat", "excel", "table-ux"],
   "skills": "./skills/"
 }
